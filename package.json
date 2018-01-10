@@ -1,0 +1,15 @@
+{
+  "name": "opendash-widget-highcharts-live",
+  "version": "1.0.0",
+  "author": "Nico Castelli <nico.castelli@uni-siegen.de>",
+  "license": "UNLICENSED",
+  "private": true,
+  "main": "src/index.js",
+  "jsnext:main": "src/index.js",
+  "module": "src/index.js",
+  "assets": [
+    "assets"
+  ],
+  "dependencies": {
+  }
+}
