@@ -2,7 +2,7 @@ let $data, $element, $scope, moment, lodash, $event;
 
 export default class WidgetController {
 
-  static $inject = ['od.data.service', '$element', '$scope', 'moment', 'lodash', 'od.event.service'];
+  static get $inject() { return ['opendash/services/data', '$element', '$scope', 'moment', 'lodash', 'opendash/services/event']; }
 
   constructor(_$data, _$element, _$scope, _moment, _lodash, _$event) {
     $data = _$data;
@@ -25,11 +25,46 @@ export default class WidgetController {
     this.moment = moment;
     this.values = [];
 
-    var that = this;
-    setTimeout(function () {
-      that.hcData.getChartObj().reflow();
-    }, 2000);
+    let newValue = this.config.item;
+    newValue = JSON.parse(newValue);
+    let id = newValue[0];
+    let valueIndex = newValue[1];
+    let item = $data.get(id);
 
+    if (!item || !item.value) {
+      console.error('KPI Widget Item Not Found..', id);
+      return;
+    }
+
+    this.createChart();
+
+    item.liveValues((values) => {
+      if (this.values.length < 3) {
+        item.history({
+          aggregation: 1,
+          since: moment().subtract(1, 'hours'),
+        }).then(dataSet => {
+          this.values = [];
+          let dataProcessor = dataSet.slice(dataSet.length - 50);
+          for (var i = 0; i < dataProcessor.length; i++) {
+            this.values.push([dataProcessor[i].date, parseFloat(dataProcessor[i].value[0].toFixed(2))])
+          }
+          this.values = this.lodash.sortBy(this.values, o => o[0]);
+          this.hcData.getChartObj().series[0].setData(this.values, true, false, true);
+          this.hcData.getChartObj().reflow();
+          this.loading = false;
+        })
+      } else {
+        let value = parseFloat(values.value[valueIndex]);
+        this.values.push([values.date, parseFloat(value.toFixed(2))])
+        this.hcData.getChartObj().series[0].addPoint([values.date, value], true, true);
+        this.hcData.getChartObj().reflow();
+        this.loading = false;
+      }
+    });
+  }
+
+  createChart() {
     this.hcData = {
       chart: {
         type: "spline",
@@ -105,42 +140,6 @@ export default class WidgetController {
         }())
       }]
     };
-
-    let newValue = this.config.item;
-    newValue = JSON.parse(newValue);
-    let id = newValue[0];
-    let valueIndex = newValue[1];
-    let item = $data.get(id);
-
-    if (!item || !item.value) {
-      console.error('KPI Widget Item Not Found..', id);
-      return;
-    }
-
-    item.liveValues((values) => {
-      if (this.values.length < 3) {
-        item.history({
-          aggregation: 1,
-          since: moment().subtract(1, 'hours'),
-        }).then(dataSet => {
-          this.values = [];
-          let dataProcessor = dataSet.slice(dataSet.length - 50);
-          for (var i = 0; i < dataProcessor.length; i++) {
-            this.values.push([dataProcessor[i].date, parseFloat(dataProcessor[i].value[0].toFixed(2))])
-          }
-          this.values = this.lodash.sortBy(this.values, o => o[0]);
-          this.hcData.getChartObj().series[0].setData(this.values, true, false, true);
-          this.hcData.getChartObj().reflow();
-          this.loading = false;
-        })
-      } else {
-        let value = parseFloat(values.value[valueIndex]);
-        this.values.push([values.date, parseFloat(value.toFixed(2))])
-        this.hcData.getChartObj().series[0].addPoint([values.date, value], true, true);
-        this.hcData.getChartObj().reflow();
-        this.loading = false;
-      }
-    });
   }
 }
 

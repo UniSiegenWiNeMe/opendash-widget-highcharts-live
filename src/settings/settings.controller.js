@@ -1,6 +1,6 @@
   export default class SettingsController {
 
-    static $inject = ['od.data.service', 'lodash'];
+    static get $inject() { return ['opendash/services/data', 'lodash']; }
 
     constructor($data, _) {
       let items = $data.listByType('Number');
